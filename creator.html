@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Starducks — Creator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <style>
+    @font-face{ font-family:"HeadingCustom"; src:url("./assets/fonts/Foglihten.ttf") format("truetype"); font-display:swap; }
+    @font-face{ font-family:"Alagard"; src:url("./assets/fonts/Alagard.ttf") format("truetype"); font-display:swap; }
+    :root{ --bg:#000; --ink:#f2f2f2; --muted:#9aa1a6; --accent:#ff2b4d; --card:rgba(255,255,255,.08); --border:rgba(255,255,255,.15); }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; color:var(--ink); background:#000; font-family:Alagard, ui-serif, Georgia, serif; letter-spacing:.2px; overflow-x:hidden}
+    #stars{position:fixed; inset:0; z-index:-1; background:#000}
+    header{ position:sticky; top:0; backdrop-filter:blur(8px); background:linear-gradient(0deg, transparent, rgba(0,0,0,.65)); border-bottom:1px solid var(--border); z-index:50; }
+    .row{max-width:1200px; margin:0 auto; padding:14px 18px; display:flex; align-items:center; gap:14px}
+    .brand img{height:40px; display:block}
+    .spacer{flex:1}
+    .btn{cursor:pointer; border:1px solid var(--border); background:var(--card); color:var(--ink); padding:10px 14px; border-radius:12px; font-size:14px; transition:.2s; text-decoration:none; display:inline-flex; align-items:center; gap:10px}
+    .btn:hover{transform:translateY(-1px); background:rgba(255,255,255,.12)}
+    .btn.primary{background:var(--accent); border-color:transparent; color:#fff}
+    footer{max-width:1200px; margin:100px auto 30px; padding:0 18px; text-align:center; color:#b5b5b5; font-size:12px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial; }
+    .glass{background:var(--card); border:1px solid var(--border); border-radius:18px; padding:18px; box-shadow:0 6px 24px rgba(0,0,0,.35)}
+  </style>
+
+  <style>
+    .wrap{max-width:900px; margin:24px auto; padding:0 18px}
+    .row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px}
+    .row input, .row select{background:transparent; border:1px solid var(--border); color:var(--ink); padding:10px 12px; border-radius:12px; min-width:220px}
+    .contentEditable{min-height:140px; padding:6px 0; border:none; background:transparent; outline:none}
+    .note{opacity:.75; font-size:14px}
+  </style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <header>
+    <div class="row">
+      <a class="brand" href="index.html"><img src="assets/logo.svg" alt="Starducks"></a>
+      <div class="spacer"></div>
+      <a class="btn" href="index.html">Home</a>
+    </div>
+  </header>
+
+  <div class="wrap glass" id="panel" style="display:none">
+    <h2 style="font-family:HeadingCustom,Impact;margin:0 0 10px">Create a Post</h2>
+    <div class="row">
+      <input id="postTitle" type="text" placeholder="Title" style="flex:1"/>
+      <input id="imgUrl" type="url" placeholder="Image URL (optional)" style="flex:1"/>
+      <input id="imgUpload" type="file" accept="image/*" />
+    </div>
+    <div id="postBody" class="contentEditable" contenteditable="true"></div>
+    <div class="row">
+      <button class="btn primary" id="publish">Publish</button>
+      <button class="btn" id="clear">Clear</button>
+    </div>
+    <div class="note">Paste image URLs or upload a file. Timestamp is added automatically.</div>
+  </div>
+
+  <div class="wrap glass" id="locked">
+    <h2 style="font-family:HeadingCustom,Impact;margin:0 0 10px">Locked</h2>
+    <p class="note">Posting is available to creators only.</p>
+    <button class="btn" id="unlock">Unlock posting</button>
+  </div>
+
+  <footer>Design by Uefa Chankarn</footer>
+
+  <script>
+
+  const starCanvas = document.getElementById('stars');
+  if(starCanvas){
+    const ctx = starCanvas.getContext('2d'); let W,H,stars=[];
+    function resize(){W=starCanvas.width=innerWidth; H=starCanvas.height=innerHeight} addEventListener('resize', resize); resize();
+    function makeStars(n=1600){ stars=[...Array(n)].map(()=>({x:Math.random()*W,y:Math.random()*H,z:Math.random()*1.6+.2,r:Math.random()*1.3+.2,v:Math.random()*0.28+.05})) } makeStars();
+    (function loop(){ ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H); for(const s of stars){ s.y+=s.v*s.z; if(s.y>H) s.y=0, s.x=Math.random()*W; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,'+(0.55+Math.random()*0.45)+')'; ctx.fill(); } requestAnimationFrame(loop) })();
+  }
+
+  const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}, set(k,v){localStorage.setItem(k,JSON.stringify(v))}};
+  const state = { user: store.get('user', null), creators: store.get('creators', {}), posts: store.get('posts', []), chat: store.get('chat', []), songURL: store.get('songURL', '') };
+  function save(){ store.set('user',state.user); store.set('creators',state.creators); store.set('posts',state.posts); store.set('chat',state.chat); store.set('songURL',state.songURL); }
+  const CODE_CREATOR = atob("MTIwNw==");  // hidden
+  const CODE_SONG = atob("MjYyNg==");     // hidden
+  function notifyEmail(msg){ console.log('Notify → uefa.sorawit.chankarn@gmail.com :', msg); }
+
+    function isCreator(){ return state.user && state.creators[state.user.email]; }
+    function gate(){
+      document.getElementById('panel').style.display = isCreator() ? 'block' : 'none';
+      document.getElementById('locked').style.display = isCreator() ? 'none' : 'block';
+    }
+    document.getElementById('unlock').onclick = ()=>{ if(!state.user) return alert('Sign in first.'); const key=prompt('Enter access key'); if(key===CODE_CREATOR){ state.creators[state.user.email]={name:state.user.name,country:state.user.country,avatar:state.user.avatar}; save(); gate(); alert('Posting unlocked.'); notifyEmail('Creator unlocked: '+state.user.email); } else alert('Wrong key.'); };
+    document.getElementById('clear').onclick = ()=>{ document.getElementById('postTitle').value=''; document.getElementById('imgUrl').value=''; document.getElementById('postBody').innerHTML=''; document.getElementById('imgUpload').value=''; };
+    document.getElementById('imgUpload').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>document.getElementById('imgUrl').value=r.result; r.readAsDataURL(f); });
+    document.getElementById('publish').onclick = ()=>{ if(!isCreator()) return alert('Creators only'); const title=document.getElementById('postTitle').value.trim(), body=document.getElementById('postBody').innerHTML.trim(); if(!title && !body) return alert('Write something'); const img=document.getElementById('imgUrl').value.trim(); const post={ id:crypto.randomUUID(), title, body, img, author:state.user.name, email:state.user.email, country:state.user.country, avatar:state.user.avatar, ts:Date.now(), flights:0, comments:[] }; state.posts.unshift(post); save(); alert('Published!'); };
+    gate();
+  </script>
+</body>
+</html>
